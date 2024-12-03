@@ -32,7 +32,6 @@ def load_model():
         )
         
         return model, tokenizer
-        
     except Exception as e:
         raise RuntimeError(f"Model loading failed: {str(e)}")
 
@@ -55,7 +54,9 @@ if __name__ == "__main__":
         prompt = os.getenv('PROMPT')
         if not prompt:
             raise ValueError("No PROMPT found in environment variables")
-
+        
+        print(f"Received prompt: {prompt}")
+        
         # Load model and generate response
         model, tokenizer = load_model()
         response = generate_text(prompt, model, tokenizer)
@@ -67,13 +68,17 @@ if __name__ == "__main__":
         }
         
         # Write to output directory
-        output_dir = Path(os.getenv('OUTPUT_DIR', '/outputs'))
+        output_dir = Path('/outputs')
         output_dir.mkdir(parents=True, exist_ok=True)
         
         with open(output_dir / 'result.json', 'w') as f:
             json.dump(output, f, indent=2)
             
+        # Also print to stdout
+        print("\nResponse:", response)
+        
     except Exception as e:
+        print(f"Error: {str(e)}", file=sys.stderr)
         error_output = {
             "error": str(e),
             "troubleshooting": [
@@ -83,10 +88,10 @@ if __name__ == "__main__":
             ]
         }
         
-        output_dir = Path(os.getenv('OUTPUT_DIR', '/outputs'))
+        output_dir = Path('/outputs')
         output_dir.mkdir(parents=True, exist_ok=True)
         
         with open(output_dir / 'error.json', 'w') as f:
             json.dump(error_output, f, indent=2)
-        
+            
         raise

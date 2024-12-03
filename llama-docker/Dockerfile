@@ -12,7 +12,7 @@ RUN mkdir -p /outputs
 # Copy the Python script
 COPY run_llama.py /app/
 
-# Make the script write to the outputs directory
-ENV OUTPUT_DIR=/outputs
+# Make script executable
+RUN chmod +x /app/run_llama.py
 
 ENTRYPOINT ["python", "run_llama.py"]
