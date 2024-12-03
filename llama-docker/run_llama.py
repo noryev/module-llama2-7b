@@ -1,57 +1,83 @@
-from transformers import AutoTokenizer, AutoModelForCausalLM
+import sys
 import torch
 import os
 import json
 from pathlib import Path
+from transformers import AutoTokenizer, AutoModelForCausalLM
+import logging
 
-# Get prompt and clean it
-prompt = os.environ.get('PROMPT', '')
-# Remove any quotes
-prompt = prompt.strip('"')
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Print for debugging
-print(f"Received prompt: {prompt}")
+def get_prompt():
+    # Use sys.argv[1] if available, otherwise fall back to environment variable or default
+    if len(sys.argv) > 1:
+        prompt = " ".join(sys.argv[1:])  # Join all arguments to allow for prompts with spaces
+    else:
+        prompt = os.environ.get('PROMPT', os.environ.get('DEFAULT_PROMPT', "Tell me about LLaMA."))
+    
+    # Remove any quotes and clean
+    prompt = prompt.strip('"')
+    logging.info(f"Using prompt: {prompt}")
+    return prompt
 
-try:
-    model = AutoModelForCausalLM.from_pretrained(
-        "meta-llama/Llama-2-7b-hf",
-        device_map="auto",
-        torch_dtype=torch.float16,
-        low_cpu_mem_usage=True,
-        use_auth_token=os.environ.get('HF_TOKEN')
-    )
+def main():
+    try:
+        logging.info("Starting LLaMA inference script")
+        
+        # Get the prompt
+        prompt = get_prompt()
+        
+        # Load the model
+        logging.info("Loading LLaMA model")
+        model = AutoModelForCausalLM.from_pretrained(
+            "meta-llama/Llama-2-7b-hf",
+            device_map="auto",
+            torch_dtype=torch.float16,
+            low_cpu_mem_usage=True,
+            use_auth_token=os.environ.get('HF_TOKEN')
+        )
 
-    tokenizer = AutoTokenizer.from_pretrained(
-        "meta-llama/Llama-2-7b-hf", 
-        use_auth_token=os.environ.get('HF_TOKEN')
-    )
+        logging.info("Loading tokenizer")
+        tokenizer = AutoTokenizer.from_pretrained(
+            "meta-llama/Llama-2-7b-hf", 
+            use_auth_token=os.environ.get('HF_TOKEN')
+        )
 
-    # Generate response
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-    outputs = model.generate(
-        **inputs,
-        max_length=100,
-        num_return_sequences=1,
-        temperature=0.7,
-        do_sample=True
-    )
-    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+        # Generate response
+        logging.info("Generating response")
+        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+        outputs = model.generate(
+            **inputs,
+            max_length=100,
+            num_return_sequences=1,
+            temperature=0.7,
+            do_sample=True
+        )
+        response = tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-    # Save output
-    output = {
-        "prompt": prompt,
-        "response": response
-    }
+        # Prepare output
+        output = {
+            "prompt": prompt,
+            "response": response
+        }
 
-    # Write to outputs directory
-    output_dir = Path('/outputs')
-    output_dir.mkdir(parents=True, exist_ok=True)
-    with open(output_dir / 'result.json', 'w') as f:
-        json.dump(output, f, indent=2)
+        # Save the output
+        output_dir = Path('/outputs')
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / 'result.json'
+        
+        with open(output_path, 'w') as f:
+            json.dump(output, f, indent=2)
+        
+        logging.info(f"Response generated and saved to {output_path}")
+        logging.info(f"Response: {response}")
 
-    print(f"\nResponse: {response}")
+    except Exception as e:
+        logging.error(f"An error occurred: {str(e)}", exc_info=True)
+        error_path = Path('/outputs/error.json')
+        with open(error_path, 'w') as f:
+            json.dump({"error": str(e)}, f)
 
-except Exception as e:
-    print(f"Error: {str(e)}")
-    with open('/outputs/error.json', 'w') as f:
-        json.dump({"error": str(e)}, f)
+if __name__ == "__main__":
+    main()
