@@ -19,7 +19,7 @@
                 "EnvironmentVariables": [
                     {{ if .Prompt }}"{{ subst "PROMPT=%s" .Prompt }}"{{ end }},
                 ],
-                "Image": "noryev/llama2-7b:latest"
+                "Image": "dockerhub.com/noryev/llama2-7b:latest"
             },
             "Engine": "Docker",
             "Network": {
