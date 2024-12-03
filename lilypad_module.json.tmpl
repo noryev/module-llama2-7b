@@ -15,9 +15,9 @@
                 "Concurrency": 1
             },
             "Docker": {
-                "Entrypoint": ["python", "/app/run_llama.py"],
+                "Entrypoint": ["python", "run_llama.py"],
                 "EnvironmentVariables": [
-                    {{ if .prompt }}"PROMPT={{ .prompt | js }}"{{ else }}"PROMPT=What is the capital of France?"{{ end }},
+                    {{ if .prompt }}"PROMPT={{ .prompt | js }}"{{ end }},
                     "HF_TOKEN=your_token_here"
                 ],
                 "Image": "noryev/llama2-7b:latest"
@@ -38,10 +38,7 @@
             "Resources": {
                 "GPU": "1"
             },
-            "Timeout": 1800,
-            "Wasm": {
-                "EntryModule": {}
-            }
+            "Timeout": 1800
         }
     }
 }
