@@ -3,96 +3,55 @@ import torch
 import os
 import json
 from pathlib import Path
-import logging
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# Get prompt and clean it
+prompt = os.environ.get('PROMPT', '')
+# Remove any quotes
+prompt = prompt.strip('"')
 
-def clean_prompt(prompt):
-    """Clean prompt by removing quotes and handling potential prefix"""
-    if prompt.startswith('"') and prompt.endswith('"'):
-        prompt = prompt[1:-1]
-    if prompt.startswith('PROMPT='):
-        prompt = prompt[7:]
-    if prompt.startswith('"') and prompt.endswith('"'):
-        prompt = prompt[1:-1]
-    return prompt
+# Print for debugging
+print(f"Received prompt: {prompt}")
 
-def run_inference():
-    # Get and clean prompt from environment variable
-    raw_prompt = os.environ.get('PROMPT')
-    if not raw_prompt:
-        raise ValueError("No PROMPT found in environment variables")
-        
-    prompt = clean_prompt(raw_prompt)
-    logging.info(f"Processing prompt: {prompt}")
-    
-    # Get HF token
-    hf_token = os.environ.get('HF_TOKEN')
-    if not hf_token:
-        raise ValueError("No HF_TOKEN found in environment variables")
-    
-    try:
-        # Load model
-        logging.info("Loading model...")
-        model = AutoModelForCausalLM.from_pretrained(
-            "meta-llama/Llama-2-7b-hf",
-            device_map="auto",
-            torch_dtype=torch.float16,
-            low_cpu_mem_usage=True,
-            use_auth_token=hf_token,
-            cache_dir="/root/.cache/huggingface"
-        )
-        
-        # Load tokenizer
-        tokenizer = AutoTokenizer.from_pretrained(
-            "meta-llama/Llama-2-7b-hf", 
-            use_auth_token=hf_token,
-            cache_dir="/root/.cache/huggingface"
-        )
-        
-        # Generate response
-        logging.info("Generating response...")
-        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-        outputs = model.generate(
-            **inputs,
-            max_length=100,
-            num_return_sequences=1,
-            temperature=0.7,
-            do_sample=True
-        )
-        response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-        
-        # Write output
-        output = {
-            "prompt": prompt,
-            "response": response
-        }
-        
-        # Save to outputs directory
-        output_dir = Path('/outputs')
-        output_dir.mkdir(parents=True, exist_ok=True)
-        
-        with open(output_dir / 'result.json', 'w') as f:
-            json.dump(output, f, indent=2)
-            
-        logging.info("Generation completed successfully")
-        print(f"\nPrompt: {prompt}")
-        print(f"Response: {response}")
-        
-    except Exception as e:
-        logging.error(f"Error occurred: {str(e)}")
-        error_output = {
-            "error": str(e),
-            "prompt": prompt
-        }
-        
-        output_dir = Path('/outputs')
-        output_dir.mkdir(parents=True, exist_ok=True)
-        
-        with open(output_dir / 'error.json', 'w') as f:
-            json.dump(error_output, f, indent=2)
-        raise
+try:
+    model = AutoModelForCausalLM.from_pretrained(
+        "meta-llama/Llama-2-7b-hf",
+        device_map="auto",
+        torch_dtype=torch.float16,
+        low_cpu_mem_usage=True,
+        use_auth_token=os.environ.get('HF_TOKEN')
+    )
 
-if __name__ == "__main__":
-    run_inference()
+    tokenizer = AutoTokenizer.from_pretrained(
+        "meta-llama/Llama-2-7b-hf", 
+        use_auth_token=os.environ.get('HF_TOKEN')
+    )
+
+    # Generate response
+    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+    outputs = model.generate(
+        **inputs,
+        max_length=100,
+        num_return_sequences=1,
+        temperature=0.7,
+        do_sample=True
+    )
+    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+    # Save output
+    output = {
+        "prompt": prompt,
+        "response": response
+    }
+
+    # Write to outputs directory
+    output_dir = Path('/outputs')
+    output_dir.mkdir(parents=True, exist_ok=True)
+    with open(output_dir / 'result.json', 'w') as f:
+        json.dump(output, f, indent=2)
+
+    print(f"\nResponse: {response}")
+
+except Exception as e:
+    print(f"Error: {str(e)}")
+    with open('/outputs/error.json', 'w') as f:
+        json.dump({"error": str(e)}, f)
