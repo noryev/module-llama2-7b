@@ -50,12 +50,12 @@ def generate_text(prompt, model, tokenizer, max_length=100):
 
 if __name__ == "__main__":
     try:
-        # Get prompt from environment variable
-        prompt = os.getenv('PROMPT')
+        # Get prompt from environment variable in the format used by ollama
+        prompt = os.environ.get('PROMPT', '').split('=')[-1]  # This will handle both "PROMPT=text" and just "text"
         if not prompt:
-            raise ValueError("No PROMPT found in environment variables")
-        
-        print(f"Received prompt: {prompt}")
+            raise ValueError("No prompt provided")
+            
+        print(f"Processing prompt: {prompt}")
         
         # Load model and generate response
         model, tokenizer = load_model()
@@ -78,7 +78,7 @@ if __name__ == "__main__":
         print("\nResponse:", response)
         
     except Exception as e:
-        print(f"Error: {str(e)}", file=sys.stderr)
+        print(f"Error: {str(e)}")
         error_output = {
             "error": str(e),
             "troubleshooting": [
@@ -93,5 +93,3 @@ if __name__ == "__main__":
         
         with open(output_dir / 'error.json', 'w') as f:
             json.dump(error_output, f, indent=2)
-            
-        raise

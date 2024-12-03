@@ -17,7 +17,7 @@
             "Docker": {
                 "Entrypoint": ["python", "run_llama.py"],
                 "EnvironmentVariables": [
-                    "PROMPT={{ .Prompt }}"
+                    {{ if .Prompt }}"{{ subst "PROMPT=%s" .Prompt }}"{{ end }}
                 ],
                 "Image": "noryev/llama2-7b:latest"
             },
