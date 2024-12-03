@@ -9,12 +9,16 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def run_inference():
-    # Get prompt from environment variable
-    prompt = os.environ.get('PROMPT', '')
+    # Get prompt directly from environment variable
+    prompt = os.environ.get('PROMPT')
+    logging.info(f"Received prompt: {prompt}")
+    
     if not prompt:
         raise ValueError("No PROMPT found in environment variables")
     
-    logging.info(f"Processing prompt: {prompt}")
+    # Remove "PROMPT=" prefix if it exists
+    if prompt.startswith("PROMPT="):
+        prompt = prompt[7:]
     
     # Get HF token
     hf_token = os.environ.get('HF_TOKEN')
@@ -65,6 +69,8 @@ def run_inference():
             json.dump(output, f, indent=2)
             
         logging.info("Generation completed successfully")
+        print(f"\nPrompt: {prompt}")
+        print(f"Response: {response}")
         
     except Exception as e:
         logging.error(f"Error occurred: {str(e)}")
