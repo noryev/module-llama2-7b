@@ -8,17 +8,24 @@ import logging
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def run_inference():
-    # Get prompt directly from environment variable
-    prompt = os.environ.get('PROMPT')
-    logging.info(f"Received prompt: {prompt}")
-    
-    if not prompt:
-        raise ValueError("No PROMPT found in environment variables")
-    
-    # Remove "PROMPT=" prefix if it exists
-    if prompt.startswith("PROMPT="):
+def clean_prompt(prompt):
+    """Clean prompt by removing quotes and handling potential prefix"""
+    if prompt.startswith('"') and prompt.endswith('"'):
+        prompt = prompt[1:-1]
+    if prompt.startswith('PROMPT='):
         prompt = prompt[7:]
+    if prompt.startswith('"') and prompt.endswith('"'):
+        prompt = prompt[1:-1]
+    return prompt
+
+def run_inference():
+    # Get and clean prompt from environment variable
+    raw_prompt = os.environ.get('PROMPT')
+    if not raw_prompt:
+        raise ValueError("No PROMPT found in environment variables")
+        
+    prompt = clean_prompt(raw_prompt)
+    logging.info(f"Processing prompt: {prompt}")
     
     # Get HF token
     hf_token = os.environ.get('HF_TOKEN')
@@ -65,6 +72,7 @@ def run_inference():
         # Save to outputs directory
         output_dir = Path('/outputs')
         output_dir.mkdir(parents=True, exist_ok=True)
+        
         with open(output_dir / 'result.json', 'w') as f:
             json.dump(output, f, indent=2)
             
@@ -81,6 +89,7 @@ def run_inference():
         
         output_dir = Path('/outputs')
         output_dir.mkdir(parents=True, exist_ok=True)
+        
         with open(output_dir / 'error.json', 'w') as f:
             json.dump(error_output, f, indent=2)
         raise
